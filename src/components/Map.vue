@@ -38,8 +38,8 @@ import $ from "jquery";
 export default  {
   name: 'Map',
   props: {
-    coordinates: {
-      type: Array,
+    data: {
+      type: Object,
       default: null
     },
   },
@@ -50,7 +50,8 @@ export default  {
       endpoint: "http://localhost:8080/geoserver/gis_example",
       featureNS: "gis_example",
       featureType: "wfs_polygon",
-      projection: "EPSG:3857"
+      projection: "EPSG:3857",
+      projectionFrom: "EPSG:4326"
     }
   },
   computed: {
@@ -59,7 +60,7 @@ export default  {
     }
   },
   watch: { 
-    coordinates: function(newVal, oldVal) {
+    data: function(newVal, oldVal) {
       console.log('Prop changed: ', newVal, ' | was: ', oldVal)
       if (!newVal) return;
 
@@ -71,8 +72,11 @@ export default  {
       // var multiPolygon = new MultiPolygon(polygonList);
       // var feature = new Feature(multiPolygon);
 
-      var polygon = new Polygon(newVal);
+      var polygon = new Polygon(newVal['coord']);
       var feature = new Feature(polygon);
+      if (newVal['epsg'] === this.projectionFrom) {
+        feature.getGeometry().transform(this.projectionFrom, this.projection);
+      }
 
       var vectorSource = new VectorSource();
       vectorSource.addFeature(feature);
@@ -88,11 +92,11 @@ export default  {
       });
 
       this.map.addLayer(vectorLayer);
-
+      const coord = feature.getGeometry().getCoordinates();
       this.view.animate({
-        center: newVal[0][0],
+        center: coord[0][0],
         duration: 2000,
-        zoom: 10
+        zoom: 8
       });
 
       this.insertPolygonToGeoserver(vectorLayer.getSource().getFeatures());
